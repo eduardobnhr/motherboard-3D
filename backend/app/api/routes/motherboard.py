@@ -5,16 +5,37 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from app.core.config import Settings, get_settings
 from app.schemas.analysis import MotherboardAnalysisResponse
 from app.services.motherboard_analysis import MotherboardAnalysisService
+from app.services.openai_motherboard_analyzer import (
+    MotherboardAnalysisError,
+    OpenAIMotherboardAnalyzer,
+)
 from app.utils.image_validation import ImageValidationError, validate_uploaded_image
 
 
 router = APIRouter(prefix="/motherboard", tags=["motherboard"])
 
 
-def get_analysis_service() -> MotherboardAnalysisService:
+def get_analysis_service(
+    settings: Settings = Depends(get_settings),
+) -> MotherboardAnalysisService:
     """Provide the motherboard analysis service."""
 
-    return MotherboardAnalysisService()
+    if settings.use_mock_analyzer:
+        return MotherboardAnalysisService(use_mock_analyzer=True)
+
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENAI_API_KEY is not configured.",
+        )
+
+    return MotherboardAnalysisService(
+        analyzer=OpenAIMotherboardAnalyzer(
+            api_key=settings.openai_api_key,
+            model=settings.openai_model,
+            timeout_seconds=settings.openai_timeout_seconds,
+        )
+    )
 
 
 @router.post(
@@ -37,6 +58,7 @@ async def analyze_motherboard(
         return await service.analyze(validated_image)
     except ImageValidationError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    except MotherboardAnalysisError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     finally:
         await file.close()
-

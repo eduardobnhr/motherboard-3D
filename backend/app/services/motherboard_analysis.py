@@ -1,9 +1,4 @@
-"""Motherboard image analysis service.
-
-The current implementation returns deterministic mock detections. The public
-service boundary is intentionally shaped so the mock can later be replaced by a
-GPT-4o multimodal provider without changing the API route.
-"""
+"""Motherboard image analysis service."""
 
 from app.schemas.analysis import (
     BoardDetection,
@@ -12,16 +7,28 @@ from app.schemas.analysis import (
     ImageInfo,
     MotherboardAnalysisResponse,
 )
+from app.services.openai_motherboard_analyzer import OpenAIMotherboardAnalyzer
 from app.utils.image_validation import ValidatedImage
 
 
 class MotherboardAnalysisService:
     """Analyze motherboard images and return the official Phase 1 contract."""
 
-    async def analyze(self, image: ValidatedImage) -> MotherboardAnalysisResponse:
-        """Return a mock analysis response for a validated uploaded image."""
+    def __init__(
+        self,
+        analyzer: OpenAIMotherboardAnalyzer | None = None,
+        use_mock_analyzer: bool = False,
+    ) -> None:
+        self.analyzer = analyzer
+        self.use_mock_analyzer = use_mock_analyzer
 
-        return build_mock_analysis_response(image.width, image.height)
+    async def analyze(self, image: ValidatedImage) -> MotherboardAnalysisResponse:
+        """Analyze an uploaded image with OpenAI or a development mock."""
+
+        if self.use_mock_analyzer or self.analyzer is None:
+            return build_mock_analysis_response(image.width, image.height)
+
+        return await self.analyzer.analyze(image)
 
 
 def build_mock_analysis_response(
@@ -122,4 +129,3 @@ def build_mock_analysis_response(
             ),
         ],
     )
-

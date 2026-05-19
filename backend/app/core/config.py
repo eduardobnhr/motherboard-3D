@@ -5,6 +5,8 @@ from os import getenv
 
 
 DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
+DEFAULT_OPENAI_MODEL = "gpt-4o"
+DEFAULT_OPENAI_TIMEOUT_SECONDS = 60.0
 
 
 class Settings:
@@ -13,11 +15,21 @@ class Settings:
     app_name: str = "Motherboard 3D API"
     api_prefix: str = "/api"
     max_image_upload_bytes: int
+    openai_api_key: str | None
+    openai_model: str
+    openai_timeout_seconds: float
+    use_mock_analyzer: bool
 
     def __init__(self) -> None:
         self.max_image_upload_bytes = int(
             getenv("MAX_IMAGE_UPLOAD_BYTES", DEFAULT_MAX_IMAGE_UPLOAD_BYTES)
         )
+        self.openai_api_key = getenv("OPENAI_API_KEY")
+        self.openai_model = getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+        self.openai_timeout_seconds = float(
+            getenv("OPENAI_TIMEOUT_SECONDS", DEFAULT_OPENAI_TIMEOUT_SECONDS)
+        )
+        self.use_mock_analyzer = _read_bool("USE_MOCK_ANALYZER", default=False)
 
 
 @lru_cache
@@ -26,3 +38,10 @@ def get_settings() -> Settings:
 
     return Settings()
 
+
+def _read_bool(name: str, default: bool) -> bool:
+    value = getenv(name)
+    if value is None:
+        return default
+
+    return value.strip().lower() in {"1", "true", "yes", "on"}
