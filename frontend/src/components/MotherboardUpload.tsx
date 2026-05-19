@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { FileRejection, useDropzone } from "react-dropzone";
+import { useCallback, useMemo } from "react";
+import type { FileRejection } from "react-dropzone";
+import { useDropzone } from "react-dropzone";
 
-import { analyzeMotherboardImage } from "../api/motherboardAnalysis";
-import type { MotherboardAnalysisResponse } from "../types/analysis";
+import type { PhaseOneStatus } from "../pages/PhaseOnePage";
 
 const ACCEPTED_IMAGE_TYPES = {
   "image/png": [".png"],
@@ -10,43 +10,36 @@ const ACCEPTED_IMAGE_TYPES = {
 };
 
 interface MotherboardUploadProps {
-  onAnalysisComplete: (analysis: MotherboardAnalysisResponse) => void;
+  errorMessage: string | null;
+  previewUrl: string | null;
+  selectedFile: File | null;
+  status: PhaseOneStatus;
+  onAnalyze: () => void;
+  onFileRejected: (message: string) => void;
+  onFileSelected: (file: File) => void;
 }
 
 export function MotherboardUpload({
-  onAnalysisComplete,
+  errorMessage,
+  previewUrl,
+  selectedFile,
+  status,
+  onAnalyze,
+  onFileRejected,
+  onFileSelected,
 }: MotherboardUploadProps) {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl(null);
-      return;
-    }
-
-    const objectUrl = URL.createObjectURL(selectedFile);
-    setPreviewUrl(objectUrl);
-
-    return () => URL.revokeObjectURL(objectUrl);
-  }, [selectedFile]);
-
   const handleAcceptedFiles = useCallback((files: File[]) => {
     const nextFile = files[0];
     if (!nextFile) {
       return;
     }
 
-    setSelectedFile(nextFile);
-    setErrorMessage(null);
-  }, []);
+    onFileSelected(nextFile);
+  }, [onFileSelected]);
 
   const handleRejectedFiles = useCallback((rejections: FileRejection[]) => {
-    setSelectedFile(null);
-    setErrorMessage(buildDropzoneError(rejections));
-  }, []);
+    onFileRejected(buildDropzoneError(rejections));
+  }, [onFileRejected]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept: ACCEPTED_IMAGE_TYPES,
@@ -57,6 +50,7 @@ export function MotherboardUpload({
     onDropRejected: handleRejectedFiles,
   });
 
+  const isAnalyzing = status === "analyzing";
   const canAnalyze = Boolean(selectedFile) && !isAnalyzing;
 
   const fileSummary = useMemo(() => {
@@ -66,25 +60,6 @@ export function MotherboardUpload({
 
     return `${selectedFile.name} - ${formatFileSize(selectedFile.size)}`;
   }, [selectedFile]);
-
-  async function handleAnalyzeClick() {
-    if (!selectedFile) {
-      setErrorMessage("Selecione uma imagem antes de iniciar a analise.");
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setErrorMessage(null);
-
-    try {
-      const analysis = await analyzeMotherboardImage(selectedFile);
-      onAnalysisComplete(analysis);
-    } catch (error) {
-      setErrorMessage(toFriendlyErrorMessage(error));
-    } finally {
-      setIsAnalyzing(false);
-    }
-  }
 
   return (
     <section className="upload-panel" aria-labelledby="upload-title">
@@ -136,7 +111,7 @@ export function MotherboardUpload({
         className="primary-button"
         type="button"
         disabled={!canAnalyze}
-        onClick={handleAnalyzeClick}
+        onClick={onAnalyze}
       >
         {isAnalyzing ? "Analisando..." : "Analisar placa"}
       </button>
@@ -164,12 +139,3 @@ function formatFileSize(size: number): string {
 
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
-
-function toFriendlyErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim()) {
-    return error.message;
-  }
-
-  return "Nao foi possivel analisar a imagem. Tente novamente.";
-}
-

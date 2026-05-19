@@ -46,12 +46,19 @@ button {
   align-items: start;
 }
 
+.workflow-column,
+.viewer-column,
 .upload-panel,
-.analysis-panel {
+.preview-summary {
   display: flex;
   flex-direction: column;
   gap: 18px;
   min-width: 0;
+}
+
+.viewer-column,
+.upload-panel,
+.preview-summary {
   padding: 22px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -88,6 +95,11 @@ h1 {
 
 h2 {
   font-size: 1.25rem;
+}
+
+.preview-summary h2 {
+  overflow-wrap: anywhere;
+  font-size: 1.05rem;
 }
 
 .status-pill {
@@ -225,6 +237,7 @@ h2 {
 
 .analysis-empty {
   display: grid;
+  gap: 14px;
   min-height: 560px;
   place-items: center;
   border: 1px solid var(--border);
@@ -232,6 +245,19 @@ h2 {
   color: var(--muted);
   font-weight: 700;
   text-align: center;
+}
+
+.analysis-empty p {
+  margin: 0;
+}
+
+.loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid #d8ded2;
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 850ms linear infinite;
 }
 
 .scene-shell {
@@ -266,6 +292,13 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.viewer-sidecar {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(280px, 1.05fr);
+  gap: 16px;
+  align-items: start;
 }
 
 .summary-grid {
@@ -446,7 +479,14 @@ h2 {
 
   .bbox-grid,
   .component-details-grid,
-  .summary-grid {
+  .summary-grid,
+  .viewer-sidecar {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
