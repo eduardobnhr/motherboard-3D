@@ -1,12 +1,14 @@
 """Application configuration for the motherboard analysis backend."""
 
 from functools import lru_cache
-from os import getenv
+from os import environ, getenv
+from pathlib import Path
 
 
 DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
 DEFAULT_OPENAI_MODEL = "gpt-4o"
 DEFAULT_OPENAI_TIMEOUT_SECONDS = 60.0
+BACKEND_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 
 class Settings:
@@ -36,6 +38,7 @@ class Settings:
 def get_settings() -> Settings:
     """Return cached application settings."""
 
+    _load_env_file(BACKEND_ENV_PATH)
     return Settings()
 
 
@@ -45,3 +48,21 @@ def _read_bool(name: str, default: bool) -> bool:
         return default
 
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _load_env_file(path: Path) -> None:
+    """Load backend/.env values without overriding existing environment vars."""
+
+    if not path.exists():
+        return
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\"'")
+        if key and key not in environ:
+            environ[key] = value
