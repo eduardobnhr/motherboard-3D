@@ -30,17 +30,32 @@ export function MotherboardScene({
     () => mapComponentsToScene(analysis, dimensions),
     [analysis, dimensions],
   );
+  const cameraDistance = dimensions.fitDistance * 1.18;
+  const cameraPosition: [number, number, number] = [
+    cameraDistance,
+    cameraDistance * 0.82,
+    cameraDistance,
+  ];
 
   return (
     <div className="scene-shell">
       <Canvas
-        camera={{ position: [0, 5.8, 7.6], fov: 42 }}
+        camera={{ position: cameraPosition, fov: 35 }}
         shadows
         gl={{ antialias: true }}
       >
-        <color attach="background" args={["#edf1ed"]} />
+        <color attach="background" args={["#eef2ef"]} />
         <Suspense fallback={null}>
           <SceneLights />
+          <gridHelper
+            args={[
+              Math.max(dimensions.boardWidth, dimensions.boardDepth) * 1.45,
+              18,
+              "#d7ded8",
+              "#e7ece8",
+            ]}
+            position={[0, -0.055, 0]}
+          />
           <group rotation={[0, 0, 0]}>
             <MotherboardBase dimensions={dimensions} />
             {mappedComponents.map((mappedComponent) => (
@@ -57,9 +72,9 @@ export function MotherboardScene({
           <OrbitControls
             enableDamping
             dampingFactor={0.08}
-            maxDistance={14}
-            maxPolarAngle={Math.PI / 2.15}
-            minDistance={4}
+            maxDistance={dimensions.fitDistance * 2.4}
+            maxPolarAngle={Math.PI / 2.08}
+            minDistance={dimensions.fitDistance * 0.55}
             target={[0, 0, 0]}
           />
         </Suspense>
@@ -67,4 +82,3 @@ export function MotherboardScene({
     </div>
   );
 }
-

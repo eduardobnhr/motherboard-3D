@@ -15,19 +15,18 @@ export function MotherboardBase({ dimensions }: MotherboardBaseProps) {
             dimensions.boardDepth,
           ]}
         />
-        <meshStandardMaterial color="#254d3b" roughness={0.72} metalness={0.08} />
+        <meshStandardMaterial color="#214f3b" roughness={0.82} metalness={0.04} />
       </mesh>
 
       <gridHelper
         args={[
           Math.max(dimensions.boardWidth, dimensions.boardDepth),
-          18,
-          "#6fa489",
-          "#37664f",
+          20,
+          "#4f876b",
+          "#2c654b",
         ]}
         position={[0, dimensions.boardThickness / 2 + 0.003, 0]}
       />
     </group>
   );
 }
-

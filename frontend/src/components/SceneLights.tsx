@@ -1,10 +1,15 @@
 export function SceneLights() {
   return (
     <>
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[4, 8, 5]} intensity={1.6} />
-      <directionalLight position={[-5, 4, -3]} intensity={0.55} />
+      <ambientLight intensity={0.72} />
+      <directionalLight
+        castShadow
+        intensity={1.25}
+        position={[5, 8, 6]}
+        shadow-mapSize-height={1024}
+        shadow-mapSize-width={1024}
+      />
+      <directionalLight position={[-4, 3, -5]} intensity={0.38} />
     </>
   );
 }
-

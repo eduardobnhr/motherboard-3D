@@ -19,10 +19,13 @@ export function MotherboardComponentMesh({
 }: MotherboardComponentMeshProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { component, position, size } = mappedComponent;
-  const color = useMemo(() => getComponentColor(component.type), [component.type]);
-  const emissive = isHovered || isSelected ? "#ffffff" : "#000000";
+  const material = useMemo(
+    () => getComponentMaterial(component.type),
+    [component.type],
+  );
+  const emissive = isSelected ? "#f7d354" : isHovered ? "#ffffff" : "#000000";
   const scale: [number, number, number] =
-    isSelected ? [1.04, 1.12, 1.04] : [1, 1, 1];
+    isSelected ? [1.08, 1.2, 1.08] : isHovered ? [1.03, 1.06, 1.03] : [1, 1, 1];
 
   useCursor(isHovered);
 
@@ -51,15 +54,28 @@ export function MotherboardComponentMesh({
       >
         <ComponentGeometry component={component} size={size} />
         <meshStandardMaterial
-          color={color}
+          color={material.color}
           emissive={emissive}
-          emissiveIntensity={isHovered || isSelected ? 0.16 : 0}
-          metalness={0.12}
-          roughness={0.58}
+          emissiveIntensity={isSelected ? 0.35 : isHovered ? 0.14 : 0}
+          metalness={material.metalness}
+          roughness={material.roughness}
         />
       </mesh>
 
-      {(isHovered || isSelected) && (
+      {isSelected && (
+        <mesh position={[0, -size[1] / 2 - 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry
+            args={[
+              Math.max(size[0], size[2]) * 0.58,
+              Math.max(size[0], size[2]) * 0.68,
+              48,
+            ]}
+          />
+          <meshBasicMaterial color="#f7d354" transparent opacity={0.88} />
+        </mesh>
+      )}
+
+      {isHovered && (
         <Html center distanceFactor={8} position={[0, size[1] / 2 + 0.22, 0]}>
           <div className="component-tooltip">{component.label}</div>
         </Html>
@@ -83,21 +99,28 @@ function ComponentGeometry({
   return <boxGeometry args={size} />;
 }
 
-function getComponentColor(type: string): THREE.ColorRepresentation {
-  const colors: Record<string, string> = {
-    cpu_socket: "#d6d1c4",
-    ram_slot: "#415f96",
-    pci_slot: "#2f3747",
-    chipset: "#6f4d91",
-    vrm: "#5f6872",
-    capacitor: "#997c39",
-    connector: "#b7b34a",
-    heatsink: "#7f8c8d",
-    sata_port: "#d86d3f",
-    m2_slot: "#3f7a70",
-    power_connector: "#d1d5d8",
-    unknown: "#8a8f95",
+function getComponentMaterial(type: string): {
+  color: THREE.ColorRepresentation;
+  metalness: number;
+  roughness: number;
+} {
+  const materials: Record<
+    string,
+    { color: string; metalness: number; roughness: number }
+  > = {
+    cpu_socket: { color: "#d8d2c2", metalness: 0.08, roughness: 0.5 },
+    ram_slot: { color: "#355a9a", metalness: 0.05, roughness: 0.62 },
+    pci_slot: { color: "#252d3a", metalness: 0.04, roughness: 0.7 },
+    chipset: { color: "#68468d", metalness: 0.1, roughness: 0.48 },
+    vrm: { color: "#59636f", metalness: 0.18, roughness: 0.42 },
+    capacitor: { color: "#9f7d32", metalness: 0.24, roughness: 0.38 },
+    connector: { color: "#c6be55", metalness: 0.08, roughness: 0.56 },
+    heatsink: { color: "#8d9a9c", metalness: 0.45, roughness: 0.32 },
+    sata_port: { color: "#d96a3d", metalness: 0.06, roughness: 0.58 },
+    m2_slot: { color: "#36796d", metalness: 0.06, roughness: 0.62 },
+    power_connector: { color: "#d7dce0", metalness: 0.08, roughness: 0.45 },
+    unknown: { color: "#8a8f95", metalness: 0.05, roughness: 0.6 },
   };
 
-  return colors[type] ?? colors.unknown;
+  return materials[type] ?? materials.unknown;
 }

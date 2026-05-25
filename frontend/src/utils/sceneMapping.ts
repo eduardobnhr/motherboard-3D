@@ -8,6 +8,7 @@ export interface SceneDimensions {
   boardWidth: number;
   boardDepth: number;
   boardThickness: number;
+  fitDistance: number;
 }
 
 export interface MappedComponent {
@@ -30,6 +31,7 @@ export function getSceneDimensions(
     boardWidth: DEFAULT_BOARD_WIDTH,
     boardDepth: DEFAULT_BOARD_WIDTH * boardAspectRatio,
     boardThickness: DEFAULT_BOARD_THICKNESS,
+    fitDistance: Math.max(DEFAULT_BOARD_WIDTH, DEFAULT_BOARD_WIDTH * boardAspectRatio),
   };
 }
 
@@ -81,4 +83,3 @@ function getComponentHeight(component: ComponentDetection): number {
 
   return Math.max(MIN_COMPONENT_HEIGHT, component.estimatedHeight);
 }
-
