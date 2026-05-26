@@ -68,7 +68,6 @@ export function MotherboardUpload({
           <p className="eyebrow">Fase 1</p>
           <h1 id="upload-title">Upload da placa-mae</h1>
         </div>
-        <span className="status-pill">Mock backend</span>
       </div>
 
       <div
