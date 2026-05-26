@@ -8,6 +8,7 @@ from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
 from pydantic import ValidationError
 
 from app.schemas.analysis import MotherboardAnalysisResponse
+from app.services.errors import MotherboardAnalysisError
 from app.utils.image_validation import ValidatedImage
 
 
@@ -182,10 +183,6 @@ MOTHERBOARD_ANALYSIS_SCHEMA: dict[str, Any] = {
         },
     },
 }
-
-
-class MotherboardAnalysisError(RuntimeError):
-    """Domain error raised when image analysis cannot produce a valid result."""
 
 
 class OpenAIMotherboardAnalyzer:
