@@ -4,8 +4,14 @@ from functools import lru_cache
 from os import environ, getenv
 from pathlib import Path
 
+from app.utils.image_validation import (
+    DEFAULT_MAX_IMAGE_HEIGHT,
+    DEFAULT_MAX_IMAGE_PIXELS,
+    DEFAULT_MAX_IMAGE_WIDTH,
+    DEFAULT_MAX_UPLOAD_SIZE_BYTES,
+    ImageValidationLimits,
+)
 
-DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
 DEFAULT_OPENAI_MODEL = "gpt-4o"
 DEFAULT_OPENAI_TIMEOUT_SECONDS = 60.0
 BACKEND_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
@@ -17,6 +23,9 @@ class Settings:
     app_name: str = "Motherboard 3D API"
     api_prefix: str = "/api"
     max_image_upload_bytes: int
+    max_image_width: int
+    max_image_height: int
+    max_image_pixels: int
     openai_api_key: str | None
     openai_model: str
     openai_timeout_seconds: float
@@ -24,7 +33,19 @@ class Settings:
 
     def __init__(self) -> None:
         self.max_image_upload_bytes = int(
-            getenv("MAX_IMAGE_UPLOAD_BYTES", DEFAULT_MAX_IMAGE_UPLOAD_BYTES)
+            getenv(
+                "MAX_UPLOAD_SIZE_BYTES",
+                getenv("MAX_IMAGE_UPLOAD_BYTES", DEFAULT_MAX_UPLOAD_SIZE_BYTES),
+            )
+        )
+        self.max_image_width = int(
+            getenv("MAX_IMAGE_WIDTH", DEFAULT_MAX_IMAGE_WIDTH)
+        )
+        self.max_image_height = int(
+            getenv("MAX_IMAGE_HEIGHT", DEFAULT_MAX_IMAGE_HEIGHT)
+        )
+        self.max_image_pixels = int(
+            getenv("MAX_IMAGE_PIXELS", DEFAULT_MAX_IMAGE_PIXELS)
         )
         self.openai_api_key = getenv("OPENAI_API_KEY")
         self.openai_model = getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
@@ -32,6 +53,17 @@ class Settings:
             getenv("OPENAI_TIMEOUT_SECONDS", DEFAULT_OPENAI_TIMEOUT_SECONDS)
         )
         self.use_mock_analyzer = _read_bool("USE_MOCK_ANALYZER", default=False)
+
+    @property
+    def image_validation_limits(self) -> ImageValidationLimits:
+        """Return upload safety limits for image validation."""
+
+        return ImageValidationLimits(
+            max_upload_size_bytes=self.max_image_upload_bytes,
+            max_image_width=self.max_image_width,
+            max_image_height=self.max_image_height,
+            max_image_pixels=self.max_image_pixels,
+        )
 
 
 @lru_cache

@@ -53,7 +53,7 @@ async def analyze_motherboard(
     try:
         validated_image = await validate_uploaded_image(
             file,
-            settings.max_image_upload_bytes,
+            settings.image_validation_limits,
         )
         return await service.analyze(validated_image)
     except ImageValidationError as exc:
