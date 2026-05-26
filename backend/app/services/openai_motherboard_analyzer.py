@@ -1,10 +1,18 @@
 """OpenAI-backed motherboard image analyzer."""
 
+import asyncio
 import base64
 import json
+import logging
 from typing import Any
 
-from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
+from openai import (
+    APIConnectionError,
+    APIError,
+    APITimeoutError,
+    AsyncOpenAI,
+    RateLimitError,
+)
 from pydantic import ValidationError
 
 from app.schemas.analysis import ComponentType, MotherboardAnalysisResponse
@@ -13,6 +21,9 @@ from app.utils.image_validation import ValidatedImage
 
 
 ALLOWED_COMPONENT_TYPES = [component_type.value for component_type in ComponentType]
+MAX_OPENAI_ATTEMPTS = 3
+OPENAI_RETRY_BACKOFF_SECONDS = (0.5, 1.0)
+logger = logging.getLogger(__name__)
 
 
 MOTHERBOARD_ANALYSIS_PROMPT = """Voce e um sistema de visao computacional especializado em placas-mae de computadores.
@@ -187,61 +198,120 @@ class OpenAIMotherboardAnalyzer:
     async def analyze(self, image: ValidatedImage) -> MotherboardAnalysisResponse:
         """Return a validated motherboard analysis for the uploaded image."""
 
-        try:
-            response = await self.client.responses.create(
-                model=self.model,
-                input=[
-                    {
-                        "role": "system",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": MOTHERBOARD_ANALYSIS_PROMPT,
-                            }
-                        ],
-                    },
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "input_text",
-                                "text": (
-                                    "Analyze this motherboard image. "
-                                    f"The trusted image dimensions are "
-                                    f"{image.width}x{image.height} pixels."
-                                ),
-                            },
-                            {
-                                "type": "input_image",
-                                "image_url": _to_data_url(image),
-                            },
-                        ],
-                    },
-                ],
-                text={
-                    "format": {
-                        "type": "json_schema",
-                        "name": "motherboard_analysis_response",
-                        "strict": True,
-                        "schema": MOTHERBOARD_ANALYSIS_SCHEMA,
-                    }
-                },
-            )
-        except (APIConnectionError, APITimeoutError) as exc:
+        response = await self._create_response_with_retry(image)
+        return _parse_and_validate_response(response.output_text, image)
+
+    async def _create_response_with_retry(self, image: ValidatedImage) -> Any:
+        """Call OpenAI with bounded retry for transient failures only."""
+
+        last_error: Exception | None = None
+
+        for attempt in range(1, MAX_OPENAI_ATTEMPTS + 1):
+            try:
+                return await self._create_response(image)
+            except (
+                APIConnectionError,
+                APITimeoutError,
+                RateLimitError,
+                TimeoutError,
+            ) as exc:
+                last_error = exc
+                if attempt >= MAX_OPENAI_ATTEMPTS:
+                    break
+
+                await _sleep_before_retry(exc, attempt)
+            except APIError as exc:
+                if not _is_retryable_api_error(exc):
+                    raise MotherboardAnalysisError(
+                        "OpenAI analysis service returned an error."
+                    ) from exc
+
+                last_error = exc
+                if attempt >= MAX_OPENAI_ATTEMPTS:
+                    break
+
+                await _sleep_before_retry(exc, attempt)
+
+        logger.warning(
+            "OpenAI motherboard analysis failed after %s attempts: %s",
+            MAX_OPENAI_ATTEMPTS,
+            type(last_error).__name__ if last_error else "unknown",
+        )
+
+        if isinstance(last_error, (APIConnectionError, APITimeoutError, TimeoutError)):
             raise MotherboardAnalysisError(
                 "Could not connect to the OpenAI analysis service."
-            ) from exc
-        except APIError as exc:
-            raise MotherboardAnalysisError(
-                "OpenAI analysis service returned an error."
-            ) from exc
+            ) from last_error
 
-        return _parse_and_validate_response(response.output_text, image)
+        raise MotherboardAnalysisError(
+            "OpenAI analysis service returned a transient error."
+        ) from last_error
+
+    async def _create_response(self, image: ValidatedImage) -> Any:
+        """Create one OpenAI Responses API request."""
+
+        return await self.client.responses.create(
+            model=self.model,
+            input=[
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": MOTHERBOARD_ANALYSIS_PROMPT,
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": (
+                                "Analyze this motherboard image. "
+                                f"The trusted image dimensions are "
+                                f"{image.width}x{image.height} pixels."
+                            ),
+                        },
+                        {
+                            "type": "input_image",
+                            "image_url": _to_data_url(image),
+                        },
+                    ],
+                },
+            ],
+            text={
+                "format": {
+                    "type": "json_schema",
+                    "name": "motherboard_analysis_response",
+                    "strict": True,
+                    "schema": MOTHERBOARD_ANALYSIS_SCHEMA,
+                }
+            },
+        )
 
 
 def _to_data_url(image: ValidatedImage) -> str:
     encoded = base64.b64encode(image.data).decode("ascii")
     return f"data:{image.content_type};base64,{encoded}"
+
+
+async def _sleep_before_retry(exc: Exception, attempt: int) -> None:
+    delay_seconds = OPENAI_RETRY_BACKOFF_SECONDS[attempt - 1]
+    logger.warning(
+        "OpenAI motherboard analysis transient failure on attempt %s/%s: %s. "
+        "Retrying in %.1fs.",
+        attempt,
+        MAX_OPENAI_ATTEMPTS,
+        type(exc).__name__,
+        delay_seconds,
+    )
+    await asyncio.sleep(delay_seconds)
+
+
+def _is_retryable_api_error(exc: APIError) -> bool:
+    status_code = getattr(exc, "status_code", None)
+    return isinstance(status_code, int) and status_code >= 500
 
 
 def _parse_and_validate_response(
