@@ -7,7 +7,7 @@ details; services and routes should import these models when they are added.
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # Component categories currently expected by the frontend. The component
@@ -165,3 +165,40 @@ class MotherboardAnalysisResponse(ContractModel):
         default_factory=list,
         description="Detected motherboard components to render in 3D.",
     )
+
+    @model_validator(mode="after")
+    def validate_bboxes_inside_image(self) -> "MotherboardAnalysisResponse":
+        """Ensure board and component bounding boxes fit inside the image."""
+
+        _ensure_bbox_inside_image(
+            self.board.bbox,
+            self.image,
+            "board.bbox",
+        )
+
+        for index, component in enumerate(self.components):
+            _ensure_bbox_inside_image(
+                component.bbox,
+                self.image,
+                f"components[{index}].bbox",
+            )
+
+        return self
+
+
+def _ensure_bbox_inside_image(
+    bbox: BoundingBox2D,
+    image: ImageInfo,
+    field_name: str,
+) -> None:
+    if bbox.x + bbox.width > image.width:
+        raise ValueError(
+            f"{field_name} exceeds image width: "
+            f"x + width must be <= {image.width}."
+        )
+
+    if bbox.y + bbox.height > image.height:
+        raise ValueError(
+            f"{field_name} exceeds image height: "
+            f"y + height must be <= {image.height}."
+        )
