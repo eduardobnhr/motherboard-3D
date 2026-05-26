@@ -14,6 +14,10 @@ from app.utils.image_validation import (
 
 DEFAULT_OPENAI_MODEL = "gpt-4o"
 DEFAULT_OPENAI_TIMEOUT_SECONDS = 60.0
+DEFAULT_CORS_ALLOWED_ORIGINS = (
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+)
 BACKEND_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 
@@ -30,6 +34,7 @@ class Settings:
     openai_model: str
     openai_timeout_seconds: float
     use_mock_analyzer: bool
+    cors_allowed_origins: list[str]
 
     def __init__(self) -> None:
         self.max_image_upload_bytes = int(
@@ -53,6 +58,10 @@ class Settings:
             getenv("OPENAI_TIMEOUT_SECONDS", DEFAULT_OPENAI_TIMEOUT_SECONDS)
         )
         self.use_mock_analyzer = _read_bool("USE_MOCK_ANALYZER", default=False)
+        self.cors_allowed_origins = _read_csv_list(
+            "CORS_ALLOWED_ORIGINS",
+            DEFAULT_CORS_ALLOWED_ORIGINS,
+        )
 
     @property
     def image_validation_limits(self) -> ImageValidationLimits:
@@ -80,6 +89,20 @@ def _read_bool(name: str, default: bool) -> bool:
         return default
 
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _read_csv_list(name: str, default: tuple[str, ...]) -> list[str]:
+    value = getenv(name)
+    if value is None:
+        return list(default)
+
+    items = [
+        item.strip()
+        for item in value.split(",")
+        if item.strip() and item.strip() != "*"
+    ]
+
+    return items or list(default)
 
 
 def _load_env_file(path: Path) -> None:
