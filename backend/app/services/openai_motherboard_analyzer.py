@@ -7,25 +7,12 @@ from typing import Any
 from openai import APIConnectionError, APIError, APITimeoutError, AsyncOpenAI
 from pydantic import ValidationError
 
-from app.schemas.analysis import MotherboardAnalysisResponse
+from app.schemas.analysis import ComponentType, MotherboardAnalysisResponse
 from app.services.errors import MotherboardAnalysisError
 from app.utils.image_validation import ValidatedImage
 
 
-ALLOWED_COMPONENT_TYPES = [
-    "cpu_socket",
-    "ram_slot",
-    "pci_slot",
-    "chipset",
-    "vrm",
-    "capacitor",
-    "connector",
-    "heatsink",
-    "sata_port",
-    "m2_slot",
-    "power_connector",
-    "unknown",
-]
+ALLOWED_COMPONENT_TYPES = [component_type.value for component_type in ComponentType]
 
 
 MOTHERBOARD_ANALYSIS_PROMPT = """Voce e um sistema de visao computacional especializado em placas-mae de computadores.

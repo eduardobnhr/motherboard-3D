@@ -57,6 +57,14 @@ def test_component_bbox_outside_image_is_rejected() -> None:
         MotherboardAnalysisResponse.model_validate(payload)
 
 
+def test_unknown_arbitrary_component_type_is_rejected() -> None:
+    payload = _payload()
+    payload["components"][0]["type"] = "gpu_slot"
+
+    with pytest.raises(ValidationError):
+        MotherboardAnalysisResponse.model_validate(payload)
+
+
 def _payload():
     return {
         "image": {"width": 100, "height": 100},
@@ -77,4 +85,3 @@ def _payload():
             }
         ],
     }
-

@@ -6,6 +6,7 @@ from app.schemas.analysis import (
     BoundingBox2D,
     ComponentDetection,
     ComponentShape,
+    ComponentType,
     ImageInfo,
     MotherboardAnalysisRequest,
     MotherboardAnalysisResponse,
@@ -17,8 +18,8 @@ __all__ = [
     "BoundingBox2D",
     "ComponentDetection",
     "ComponentShape",
+    "ComponentType",
     "ImageInfo",
     "MotherboardAnalysisRequest",
     "MotherboardAnalysisResponse",
 ]
-

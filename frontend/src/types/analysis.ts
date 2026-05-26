@@ -46,9 +46,9 @@ export interface BoardDetection {
 export type ComponentShape = "box" | "cylinder" | "flat";
 
 /**
- * Component categories currently expected by the frontend.
+ * Closed Phase 1 component categories accepted by the 3D viewer.
  */
-export type KnownComponentType =
+export type ComponentType =
   | "cpu_socket"
   | "ram_slot"
   | "pci_slot"
@@ -61,12 +61,6 @@ export type KnownComponentType =
   | "m2_slot"
   | "power_connector"
   | "unknown";
-
-/**
- * Extensible component category. Known values are listed above, while future
- * backend categories can still be represented as strings.
- */
-export type ComponentType = KnownComponentType | (string & {});
 
 /**
  * Detected hardware component that the frontend renders as 3D geometry.
@@ -115,4 +109,3 @@ export interface MotherboardAnalysisResponse {
   /** Detected motherboard components to render in 3D. */
   components: ComponentDetection[];
 }
-

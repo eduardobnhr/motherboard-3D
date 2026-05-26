@@ -3,7 +3,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { useMemo, useState } from "react";
 import * as THREE from "three";
 
-import type { ComponentDetection } from "../types/analysis";
+import type { ComponentDetection, ComponentType } from "../types/analysis";
 import type { MappedComponent } from "../utils/sceneMapping";
 
 interface MotherboardComponentMeshProps {
@@ -99,13 +99,13 @@ function ComponentGeometry({
   return <boxGeometry args={size} />;
 }
 
-function getComponentMaterial(type: string): {
+function getComponentMaterial(type: ComponentType): {
   color: THREE.ColorRepresentation;
   metalness: number;
   roughness: number;
 } {
   const materials: Record<
-    string,
+    ComponentType,
     { color: string; metalness: number; roughness: number }
   > = {
     cpu_socket: { color: "#d8d2c2", metalness: 0.08, roughness: 0.5 },
@@ -122,5 +122,5 @@ function getComponentMaterial(type: string): {
     unknown: { color: "#8a8f95", metalness: 0.05, roughness: 0.6 },
   };
 
-  return materials[type] ?? materials.unknown;
+  return materials[type];
 }

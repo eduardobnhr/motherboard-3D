@@ -6,6 +6,7 @@ details; services and routes should import these models when they are added.
 """
 
 from typing import Literal
+from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -13,20 +14,24 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 # Component categories currently expected by the frontend. The component
 # ``type`` field remains a string so the contract can accept future categories
 # without a backend schema migration.
-KNOWN_COMPONENT_TYPES = (
-    "cpu_socket",
-    "ram_slot",
-    "pci_slot",
-    "chipset",
-    "vrm",
-    "capacitor",
-    "connector",
-    "heatsink",
-    "sata_port",
-    "m2_slot",
-    "power_connector",
-    "unknown",
-)
+class ComponentType(StrEnum):
+    """Closed Phase 1 component categories accepted by the 3D viewer."""
+
+    CPU_SOCKET = "cpu_socket"
+    RAM_SLOT = "ram_slot"
+    PCI_SLOT = "pci_slot"
+    CHIPSET = "chipset"
+    VRM = "vrm"
+    CAPACITOR = "capacitor"
+    CONNECTOR = "connector"
+    HEATSINK = "heatsink"
+    SATA_PORT = "sata_port"
+    M2_SLOT = "m2_slot"
+    POWER_CONNECTOR = "power_connector"
+    UNKNOWN = "unknown"
+
+
+KNOWN_COMPONENT_TYPES = tuple(component_type.value for component_type in ComponentType)
 
 
 ComponentShape = Literal["box", "cylinder", "flat"]
@@ -76,11 +81,10 @@ class ComponentDetection(ContractModel):
         description="Stable unique identifier for this detected component.",
         examples=["cpu_socket_1"],
     )
-    type: str = Field(
+    type: ComponentType = Field(
         ...,
-        min_length=1,
         description=(
-            "Extensible component category. Known values include: "
+            "Closed Phase 1 component category. Allowed values: "
             + ", ".join(KNOWN_COMPONENT_TYPES)
             + "."
         ),
@@ -122,8 +126,11 @@ class ComponentDetection(ContractModel):
 
     @field_validator("id", "type", "label")
     @classmethod
-    def normalize_required_text(cls, value: str) -> str:
+    def normalize_required_text(cls, value: str | ComponentType) -> str | ComponentType:
         """Trim required strings and reject values that become empty."""
+
+        if isinstance(value, ComponentType):
+            return value
 
         normalized = value.strip()
         if not normalized:
@@ -132,10 +139,13 @@ class ComponentDetection(ContractModel):
 
     @field_validator("type")
     @classmethod
-    def normalize_component_type(cls, value: str) -> str:
-        """Keep categories predictable while allowing future string values."""
+    def normalize_component_type(cls, value: str | ComponentType) -> ComponentType:
+        """Normalize known categories and reject arbitrary component types."""
 
-        return value.lower()
+        if isinstance(value, ComponentType):
+            return value
+
+        return ComponentType(value.strip().lower())
 
 
 class MotherboardAnalysisRequest(ContractModel):
